@@ -1,0 +1,157 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+
+# Configuration des graphiques
+sns.set_theme(style="whitegrid")
+
+
+class SensorDecorrelator:
+    """
+    Classe pour gérer le chargement, l'analyse et la décorrélation
+    des données de capteurs (SHM).
+    """
+
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.df = None
+        self.model = None
+        # CORRECTION ICI : Tout en minuscules pour correspondre à ton fichier
+        self.features = ["temperature", "ensoleillement"]
+        self.target = "deplacement"
+
+    def load_data(self):
+        """
+        Charge et nettoie les données avec gestion rigoureuse des types.
+        """
+        try:
+            print("Chargement des données...")
+            self.df = pd.read_csv(self.file_path, sep=None, engine="python")
+
+            # 1. Nettoyage des noms de colonnes (enlève les espaces invisibles au cas où)
+            self.df.columns = self.df.columns.str.strip()
+
+            # 2. Conversion de la date
+            self.df["TIMESTAMP"] = pd.to_datetime(self.df["TIMESTAMP"], errors="coerce")
+
+            # 3. Mise en Index (ESSENTIEL pour que .corr() ne plante pas sur la date)
+            self.df.set_index("TIMESTAMP", inplace=True)
+
+            # 4. Conversion Numérique (Gère les "NAN" textuels)
+            cols_to_clean = self.features + [self.target]
+            for col in cols_to_clean:
+                # Force la conversion en nombre, remplace les erreurs par NaN
+                self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
+
+            # 5. Suppression des lignes vides
+            initial_rows = len(self.df)
+            self.df = self.df.dropna()
+            clean_rows = len(self.df)
+
+            print(
+                f"Succès : {clean_rows} lignes valides (suppression de {initial_rows - clean_rows} lignes incorrectes)."
+            )
+            print(self.df.head())
+
+        except Exception as e:
+            # Affiche l'erreur exacte pour debug
+            print(f"ERREUR CRITIQUE lors du chargement : {e}")
+            # On arrête le script ici si les données ne sont pas chargées
+            raise e
+
+    def explore_data(self):
+        """
+        Affiche les corrélations et les séries temporelles.
+        """
+        if self.df is None:
+            return
+
+        # 1. Matrice de corrélation
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(self.df.corr(), annot=True, cmap="coolwarm")
+        plt.title("Matrice de Corrélation")
+        plt.show()
+
+        # 2. Visu temporelle
+        fig, ax = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
+        self.df[self.target].plot(ax=ax[0], color="blue", title="Déplacement mesuré")
+        self.df[self.features[0]].plot(ax=ax[1], color="red", title="Température")
+        self.df[self.features[1]].plot(ax=ax[2], color="orange", title="Ensoleillement")
+        plt.tight_layout()
+        plt.show()
+
+    def train_decorrelation_model(self):
+        """
+        Entraîne un modèle linéaire simple : Deplacement = a*Temp + b*Soleil + c
+        C'est l'approche 'baseline' recommandée pour commencer.
+        """
+        X = self.df[self.features]
+        y = self.df[self.target]
+
+        # Choix du modèle : Régression Linéaire (Simple, Explicable, Rapide)
+        # Pour aller plus loin (piste HST) : on pourrait ajouter des features (T^2, moyenne glissante...)
+        self.model = LinearRegression()
+        self.model.fit(X, y)
+
+        score = self.model.score(X, y)
+        print(f"Modèle entraîné. R² score : {score:.4f}")
+        print(f"Coefficients : {self.model.coef_}")
+
+    def apply_decorrelation(self):
+        """
+        Calcule les valeurs décorrélées.
+        Valeur décorrélée = Valeur Mesurée - Prédiction Environnementale
+        """
+        if self.model is None:
+            print("Modèle non entraîné.")
+            return
+
+        X = self.df[self.features]
+        # Prédiction de la part "environnementale"
+        self.df["Environment_Effect"] = self.model.predict(X)
+
+        # Le résidu est la part décorrélée (ce qui reste après avoir enlevé l'environnement)
+        self.df["Deplacement_Decorrele"] = (
+            self.df[self.target] - self.df["Environment_Effect"]
+        )
+
+    def save_and_plot_results(self):
+        """
+        Affiche le résultat final et sauvegarde.
+        """
+        plt.figure(figsize=(12, 6))
+        plt.plot(self.df.index, self.df[self.target], label="Brut (Mesuré)", alpha=0.5)
+        plt.plot(
+            self.df.index,
+            self.df["Deplacement_Decorrele"],
+            label="Décorrélé (Structurel)",
+            color="green",
+            linewidth=2,
+        )
+        plt.legend()
+        plt.title("Comparaison : Données Brutes vs Données Décorrélées")
+        plt.show()
+
+        # Sauvegarde
+        self.df.to_csv("resultats_decorreles.csv")
+        print("Résultats sauvegardés dans 'resultats_decorreles.csv'")
+
+
+if __name__ == "__main__":
+    # Remplacer 'dataset.dat' par le chemin réel
+    file_path = "dataset.dat"
+
+    analysis = SensorDecorrelator(file_path)
+    analysis.load_data()
+
+    # Vérification des noms de colonnes (à faire manuellement après le premier run)
+    # analysis.features = ['Nom_Col_Temp', 'Nom_Col_Soleil']
+    # analysis.target = 'Nom_Col_Deplacement'
+
+    analysis.explore_data()
+    analysis.train_decorrelation_model()
+    analysis.apply_decorrelation()
+    analysis.save_and_plot_results()
