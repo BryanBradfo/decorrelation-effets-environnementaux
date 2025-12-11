@@ -1,13 +1,5 @@
 # Structural Health Monitoring: Sensor Decorrelation Analysis
 
-**Author:** Bryan Chen
-
-**Date:** December 2025
-
----
-
-## 📋 Project Overview
-
 In the context of Structural Health Monitoring (SHM), measuring the aging of a structure (bridges, dams, tunnels) is often complicated by environmental factors. 
 
 This project aims to **decorrelate environmental effects** (Temperature and Solar Irradiance) from the raw measurements of a displacement sensor. By removing these reversible thermal effects, we can isolate the irreversible behavior of the structure and assess its true health.
