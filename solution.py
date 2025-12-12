@@ -9,11 +9,6 @@ sns.set_theme(style="whitegrid")
 
 
 class SensorDecorrelator:
-    """
-    Classe pour gérer le chargement, l'analyse et la décorrélation
-    des données de capteurs (SHM).
-    """
-
     def __init__(self, file_path):
         self.file_path = file_path
         self.df = None
@@ -22,28 +17,21 @@ class SensorDecorrelator:
         self.target = "deplacement"
 
     def load_data(self):
-        """
-        Charge et nettoie les données avec gestion rigoureuse des types.
-        """
         try:
             print("Chargement des données...")
             self.df = pd.read_csv(self.file_path, sep=None, engine="python")
 
-            # Nettoyage des noms de colonnes (enlève les espaces invisibles au cas où)
             self.df.columns = self.df.columns.str.strip()
 
-            # Conversion de la date
             self.df["TIMESTAMP"] = pd.to_datetime(self.df["TIMESTAMP"], errors="coerce")
 
             self.df.set_index("TIMESTAMP", inplace=True)
 
-            # Conversion Numérique (Gère les "NAN" textuels)
             cols_to_clean = self.features + [self.target]
             for col in cols_to_clean:
                 # Force la conversion en nombre, remplace les erreurs par NaN
                 self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
 
-            # Suppression des lignes vides
             initial_rows = len(self.df)
             self.df = self.df.dropna()
             clean_rows = len(self.df)
