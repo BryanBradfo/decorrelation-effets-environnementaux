@@ -5,7 +5,6 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
-# Configuration des graphiques
 sns.set_theme(style="whitegrid")
 
 
@@ -30,22 +29,21 @@ class SensorDecorrelator:
             print("Chargement des données...")
             self.df = pd.read_csv(self.file_path, sep=None, engine="python")
 
-            # 1. Nettoyage des noms de colonnes (enlève les espaces invisibles au cas où)
+            # Nettoyage des noms de colonnes (enlève les espaces invisibles au cas où)
             self.df.columns = self.df.columns.str.strip()
 
-            # 2. Conversion de la date
+            # Conversion de la date
             self.df["TIMESTAMP"] = pd.to_datetime(self.df["TIMESTAMP"], errors="coerce")
 
-            # 3. Mise en Index (ESSENTIEL pour que .corr() ne plante pas sur la date)
             self.df.set_index("TIMESTAMP", inplace=True)
 
-            # 4. Conversion Numérique (Gère les "NAN" textuels)
+            # Conversion Numérique (Gère les "NAN" textuels)
             cols_to_clean = self.features + [self.target]
             for col in cols_to_clean:
                 # Force la conversion en nombre, remplace les erreurs par NaN
                 self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
 
-            # 5. Suppression des lignes vides
+            # Suppression des lignes vides
             initial_rows = len(self.df)
             self.df = self.df.dropna()
             clean_rows = len(self.df)
@@ -56,25 +54,18 @@ class SensorDecorrelator:
             print(self.df.head())
 
         except Exception as e:
-            # Affiche l'erreur exacte pour debug
             print(f"ERREUR CRITIQUE lors du chargement : {e}")
-            # On arrête le script ici si les données ne sont pas chargées
             raise e
 
     def explore_data(self):
-        """
-        Affiche les corrélations et les séries temporelles.
-        """
         if self.df is None:
             return
 
-        # 1. Matrice de corrélation
         plt.figure(figsize=(8, 6))
         sns.heatmap(self.df.corr(), annot=True, cmap="coolwarm")
         plt.title("Matrice de Corrélation")
         plt.show()
 
-        # 2. Visu temporelle
         fig, ax = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
         self.df[self.target].plot(ax=ax[0], color="blue", title="Déplacement mesuré")
         self.df[self.features[0]].plot(ax=ax[1], color="red", title="Température")
@@ -83,10 +74,6 @@ class SensorDecorrelator:
         plt.show()
 
     def train_decorrelation_model(self):
-        """
-        Entraîne un modèle linéaire simple : Deplacement = a*Temp + b*Soleil + c
-        C'est l'approche 'baseline' recommandée pour commencer.
-        """
         X = self.df[self.features]
         y = self.df[self.target]
 
@@ -98,10 +85,6 @@ class SensorDecorrelator:
         print(f"Coefficients : {self.model.coef_}")
 
     def apply_decorrelation(self):
-        """
-        Calcule les valeurs décorrélées.
-        Valeur décorrélée = Valeur Mesurée - Prédiction Environnementale
-        """
         if self.model is None:
             print("Modèle non entraîné.")
             return
@@ -114,9 +97,6 @@ class SensorDecorrelator:
         )
 
     def save_and_plot_results(self):
-        """
-        Affiche le résultat final et sauvegarde.
-        """
         plt.figure(figsize=(12, 6))
         plt.plot(self.df.index, self.df[self.target], label="Brut (Mesuré)", alpha=0.5)
         plt.plot(
@@ -130,7 +110,6 @@ class SensorDecorrelator:
         plt.title("Comparaison : Données Brutes vs Données Décorrélées")
         plt.show()
 
-        # Sauvegarde
         self.df.to_csv("resultats_decorreles.csv")
         print("Résultats sauvegardés dans 'resultats_decorreles.csv'")
 
