@@ -19,7 +19,6 @@ class SensorDecorrelator:
         self.file_path = file_path
         self.df = None
         self.model = None
-        # CORRECTION ICI : Tout en minuscules pour correspondre à ton fichier
         self.features = ["temperature", "ensoleillement"]
         self.target = "deplacement"
 
@@ -91,8 +90,6 @@ class SensorDecorrelator:
         X = self.df[self.features]
         y = self.df[self.target]
 
-        # Choix du modèle : Régression Linéaire (Simple, Explicable, Rapide)
-        # Pour aller plus loin (piste HST) : on pourrait ajouter des features (T^2, moyenne glissante...)
         self.model = LinearRegression()
         self.model.fit(X, y)
 
@@ -110,10 +107,8 @@ class SensorDecorrelator:
             return
 
         X = self.df[self.features]
-        # Prédiction de la part "environnementale"
         self.df["Environment_Effect"] = self.model.predict(X)
 
-        # Le résidu est la part décorrélée (ce qui reste après avoir enlevé l'environnement)
         self.df["Deplacement_Decorrele"] = (
             self.df[self.target] - self.df["Environment_Effect"]
         )
@@ -141,15 +136,10 @@ class SensorDecorrelator:
 
 
 if __name__ == "__main__":
-    # Remplacer 'dataset.dat' par le chemin réel
     file_path = "dataset.dat"
 
     analysis = SensorDecorrelator(file_path)
     analysis.load_data()
-
-    # Vérification des noms de colonnes (à faire manuellement après le premier run)
-    # analysis.features = ['Nom_Col_Temp', 'Nom_Col_Soleil']
-    # analysis.target = 'Nom_Col_Deplacement'
 
     analysis.explore_data()
     analysis.train_decorrelation_model()
