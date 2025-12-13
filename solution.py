@@ -18,7 +18,6 @@ class SensorDecorrelator:
 
     def load_data(self):
         try:
-            print("Chargement des données...")
             self.df = pd.read_csv(self.file_path, sep=None, engine="python")
 
             self.df.columns = self.df.columns.str.strip()
@@ -35,10 +34,6 @@ class SensorDecorrelator:
             initial_rows = len(self.df)
             self.df = self.df.dropna()
             clean_rows = len(self.df)
-
-            print(
-                f"Succès : {clean_rows} lignes valides (suppression de {initial_rows - clean_rows} lignes incorrectes)."
-            )
             print(self.df.head())
 
         except Exception as e:
